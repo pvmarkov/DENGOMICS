@@ -68,11 +68,11 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile):
 	majorbases = list ()
 	majorsequence = ""
 	for pileupcolumn in samfile.pileup('NGC_virus', 0, samfile.lengths[0], max_depth = 2000000):
-#		coverage.append (pileupcolumn.n)
+		coverage.append (pileupcolumn.n)
 		position.append (pileupcolumn.pos)
 		A=C=T=G=N=0 # shortcut for A=0, C=0 etc.
 		for pileupread in pileupcolumn.pileups:
-			if not pileupread.is_del and not pileupread.is_refskip and pileupread.alignment.mapping_quality>=30 and pileupread.alignment.is_proper_pair:  # query position is None if is_del or is_refskip is set.
+			if not pileupread.is_del and not pileupread.is_refskip and pileupread.alignment.mapping_quality>=30:  # query position is None if is_del or is_refskip is set.
 				if pileupread.alignment.query_sequence[pileupread.query_position] == "A":
 					A=A+1
 				elif pileupread.alignment.query_sequence[pileupread.query_position] == "C":
@@ -83,7 +83,6 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile):
 					G=G+1
 				else:
 					N=N+1
-		coverage.append (A+C+T+G+N)
 		As.append (A)
 		Cs.append (C)
 		Ts.append (T)
