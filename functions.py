@@ -55,7 +55,7 @@ def make_annotation (name, start, end, correction):
     
     
 
-def getting_cover_ntfreqs(bamfile, csv_outputfile, alignquality_on, pairedread_on):
+def getting_cover_ntfreqs(bamfile, csv_outputfile):
 
 	samfile = pysam.AlignmentFile(bamfile, "rb" ) # open a file handle for the bam file under the name samfile
 	coverage = list ()
@@ -67,25 +67,22 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, alignquality_on, pairedread_o
 	Ns = list ()
 	majorbases = list ()
 	majorsequence = ""
-	for pileupcolumn in samfile.pileup('NGC_virus', 0, samfile.lengths[0], max_depth = 2000000):
-#		coverage.append (pileupcolumn.n)
+	for pileupcolumn in samfile.pileup('NGC_virus', 0, samfile.lengths[0]):
+		coverage.append (pileupcolumn.n)
 		position.append (pileupcolumn.pos)
 		A=C=T=G=N=0 # shortcut for A=0, C=0 etc.
 		for pileupread in pileupcolumn.pileups:
-			if (pairedread_on and pileupread.alignment.is_proper_pair) or (not pairedread_on) :
-				if (alignquality_on and pileupread.alignment.mapping_quality>=30) or (not alignquality_on):
-					if not pileupread.is_del and not pileupread.is_refskip :  # query position is None if is_del or is_refskip is set.
-						if pileupread.alignment.query_sequence[pileupread.query_position] == "A":
-							A=A+1
-						elif pileupread.alignment.query_sequence[pileupread.query_position] == "C":
-							C=C+1
-						elif pileupread.alignment.query_sequence[pileupread.query_position] == "T":
-							T=T+1
-						elif pileupread.alignment.query_sequence[pileupread.query_position] == "G":
-							G=G+1
-						else:
-							N=N+1
-		coverage.append (A+C+T+G+N)
+			if not pileupread.is_del and not pileupread.is_refskip:  # query position is None if is_del or is_refskip is set.
+				if pileupread.alignment.query_sequence[pileupread.query_position] == "A":
+					A=A+1
+				elif pileupread.alignment.query_sequence[pileupread.query_position] == "C":
+					C=C+1
+				elif pileupread.alignment.query_sequence[pileupread.query_position] == "T":
+					T=T+1
+				elif pileupread.alignment.query_sequence[pileupread.query_position] == "G":
+					G=G+1
+				else:
+					N=N+1
 		As.append (A)
 		Cs.append (C)
 		Ts.append (T)
