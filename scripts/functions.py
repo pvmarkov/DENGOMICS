@@ -22,6 +22,22 @@ def extracts_seqs_from_genbankformat (filename):
 				sequence = sequence + e
 	return sequence
 
+
+def extracts_seqs_from_fasta (filename):
+	try:
+		fastafile = open (filename, 'r')
+	except IOError:
+		print ("Unknown file " + filename)
+		sys.exit()
+	sequence = ""
+	for l in fastafile:
+		if ">" in l:
+			pass
+		else:
+			sequence = sequence + l.strip()
+	return sequence
+
+
 def determin_codon_posit(annotation, site_value):
     start = annotation.start
     end = annotation.end
@@ -58,8 +74,9 @@ def make_annotation (name, start, end, correction):
 def getting_cover_ntfreqs(bamfile, csv_outputfile, alignquality_on, pairedread_on):
 
 	samfile = pysam.AlignmentFile(bamfile, "rb" ) # open a file handle for the bam file under the name samfile
-	coverage = list ()
+	coverage = list () # creating an empty list that will take coverage by position (column)
 	position = list ()
+	expected_number_of_errors = list ()
 	As = list ()
 	Cs = list ()
 	Ts = list ()
@@ -67,16 +84,19 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, alignquality_on, pairedread_o
 	Ns = list ()
 	majorbases = list ()
 	majorsequence = ""
-	for pileupcolumn in samfile.pileup('NGC_virus', 0, samfile.lengths[0], max_depth = 2000000):
-#		coverage.append (pileupcolumn.n)
+	secondbase = list ()
+	for pileupcolumn in samfile.pileup('NGC_virus', 0, samfile.lengths[0], max_depth = 2000000): # iterates over alignment columns
+#		coverage.append (pileupcolumn.n) # pileupcolumn.n gives the number of reads mapping to that column. here these numbers are appended to the coverage list as the program loops column by column.
 		position.append (pileupcolumn.pos)
 		A=C=T=G=N=0 # shortcut for A=0, C=0 etc.
+		number_of_errors = 0
 		for pileupread in pileupcolumn.pileups:
 			if (pairedread_on and pileupread.alignment.is_proper_pair) or (not pairedread_on) :
 				if (alignquality_on and pileupread.alignment.mapping_quality>=30) or (not alignquality_on):
 					if not pileupread.is_del and not pileupread.is_refskip :  # query position is None if is_del or is_refskip is set.
+						number_of_errors = number_of_errors + pow (10.0, (-float (pileupread.alignment.mapping_quality)/10.0))
 						if pileupread.alignment.query_sequence[pileupread.query_position] == "A":
-							A=A+1
+							A=A+1 # counts the number of As at a site
 						elif pileupread.alignment.query_sequence[pileupread.query_position] == "C":
 							C=C+1
 						elif pileupread.alignment.query_sequence[pileupread.query_position] == "T":
@@ -85,13 +105,20 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, alignquality_on, pairedread_o
 							G=G+1
 						else:
 							N=N+1
-		coverage.append (A+C+T+G+N)
-		As.append (A)
-		Cs.append (C)
-		Ts.append (T)
-		Gs.append (G)
-		Ns.append (N)
-		majorbases.append (max(A, C, T, G))
+		if A+C+T+G+N == 0:	# this if else bit is to avoid 'Division by Zero' error in case coverage is = 0
+			coverage.append (1)
+		else:
+			coverage.append (A+C+T+G+N)
+		expected_number_of_errors.append(number_of_errors)
+		As.append(A) # populates the empty As list with the NUMBER of As by genome site.
+		Cs.append(C)
+		Ts.append(T)
+		Gs.append(G)
+		Ns.append(N)
+		l= [A, C, T, G]
+		l.sort()
+		majorbases.append (l[3]) # Populates the majorbases list with the numbers of the most frequent nuke by genome site
+		secondbase.append (l[2]) # Populates the secondbases list with the numbers of the 2nd most frequent nuke by genome site
 		if A == max (A, C, G, T):
 			majorbaseid = "a"
 		elif C == max (A, C, G, T):
@@ -100,14 +127,21 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, alignquality_on, pairedread_o
 			majorbaseid = "g"
 		else:
 			majorbaseid = "t"
-		majorsequence = majorsequence + majorbaseid
+		majorsequence = majorsequence + majorbaseid # creates the CONSENSUS SEQUENCE (populates a STRING with ACTGs to identify the most common nuke
+	
+	def ratio(x,y):
+		return x/y
 
+	majorbase_ratio = list(map(ratio, majorbases, coverage))
+	secondbase_ratio = list (map (ratio, secondbase, coverage))
+	
+	probability_of_seq_error = list (map (ratio, expected_number_of_errors, coverage))
+	
+#	print (majorsequence[19:38])
 
-	print (majorsequence[19:38])
+#	print (majorsequence[0:38])
 
-	print (majorsequence[0:38])
-
-	counts_dataframe = pd.DataFrame ({'position': position, 'coverage':coverage, 'As':As, 'Cs':Cs, 'Ts':Ts, 'Gs':Gs, 'Ns':Ns, 'majorbases':majorbases, 'majorsequence': list (majorsequence)})
+	counts_dataframe = pd.DataFrame ({'position': position, 'coverage':coverage, 'As':As, 'Cs':Cs, 'Ts':Ts, 'Gs':Gs, 'Ns':Ns, 'majorbases':majorbases, 'majorbase_ratio': majorbase_ratio, 'secondbase': secondbase, 'secondbase_ratio': secondbase_ratio, 'majorsequence': list (majorsequence), 'expected_number_of_errors':expected_number_of_errors, 'probability_of_seq_error': probability_of_seq_error} )
 
 	counts_dataframe.to_csv (csv_outputfile)
 	print (counts_dataframe.describe ())
