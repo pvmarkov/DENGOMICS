@@ -71,7 +71,7 @@ def make_annotation (name, start, end, correction):
     
     
 
-def getting_cover_ntfreqs(bamfile, csv_outputfile, alignquality_on, pairedread_on):
+def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignquality_on, pairedread_on):
 
 	samfile = pysam.AlignmentFile(bamfile, "rb" ) # open a file handle for the bam file under the name samfile
 	coverage = list () # creating an empty list that will take coverage by position (column)
@@ -94,17 +94,18 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, alignquality_on, pairedread_o
 			if (pairedread_on and pileupread.alignment.is_proper_pair) or (not pairedread_on) :
 				if (alignquality_on and pileupread.alignment.mapping_quality>=30) or (not alignquality_on):
 					if not pileupread.is_del and not pileupread.is_refskip :  # query position is None if is_del or is_refskip is set.
-						number_of_errors = number_of_errors + pow (10.0, (-float (pileupread.alignment.mapping_quality)/10.0))
-						if pileupread.alignment.query_sequence[pileupread.query_position] == "A":
-							A=A+1 # counts the number of As at a site
-						elif pileupread.alignment.query_sequence[pileupread.query_position] == "C":
-							C=C+1
-						elif pileupread.alignment.query_sequence[pileupread.query_position] == "T":
-							T=T+1
-						elif pileupread.alignment.query_sequence[pileupread.query_position] == "G":
-							G=G+1
-						else:
-							N=N+1
+						if (sequencingquality_on and pileupread.alignment.query_qualities[pileupread.query_position]>=30) or (not sequencingquality_on):
+							number_of_errors = number_of_errors + pow (10.0, (-float (pileupread.alignment.mapping_quality)/10.0))
+							if pileupread.alignment.query_sequence[pileupread.query_position] == "A":
+								A=A+1 # counts the number of As at a site
+							elif pileupread.alignment.query_sequence[pileupread.query_position] == "C":
+								C=C+1
+							elif pileupread.alignment.query_sequence[pileupread.query_position] == "T":
+								T=T+1
+							elif pileupread.alignment.query_sequence[pileupread.query_position] == "G":
+								G=G+1
+							else:
+								N=N+1
 		if A+C+T+G+N == 0:	# this if else bit is to avoid 'Division by Zero' error in case coverage is = 0
 			coverage.append (1)
 		else:
