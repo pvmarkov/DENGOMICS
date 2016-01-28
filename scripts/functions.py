@@ -85,16 +85,18 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 	majorbases = list ()
 	majorsequence = ""
 	secondbase = list ()
+# ITERATES COLUMN BY COLUMN
 	for pileupcolumn in samfile.pileup('NGC_virus', 0, samfile.lengths[0], max_depth = 2000000): # iterates over alignment columns
 #		coverage.append (pileupcolumn.n) # pileupcolumn.n gives the number of reads mapping to that column. here these numbers are appended to the coverage list as the program loops column by column.
 		position.append (pileupcolumn.pos)
 		A=C=T=G=N=0 # shortcut for A=0, C=0 etc.
 		number_of_errors = 0
+	# WITHIN COLUMN, ITERATES ROW BY ROW
 		for pileupread in pileupcolumn.pileups:
 			if (pairedread_on and pileupread.alignment.is_proper_pair) or (not pairedread_on) :
 				if (alignquality_on and pileupread.alignment.mapping_quality>=30) or (not alignquality_on):
 					if not pileupread.is_del and not pileupread.is_refskip :  # query position is None if is_del or is_refskip is set.
-						if (sequencingquality_on and pileupread.alignment.query_qualities[pileupread.query_position]>=30) or (not sequencingquality_on):
+						if (sequencingquality_on and pileupread.alignment.query_qualities[pileupread.query_position]>=30) or (not sequencingquality_on): # skips lower hierarchy loops if sequencing filter is on AND seq quality is low.
 							number_of_errors = number_of_errors + pow (10.0, (-float (pileupread.alignment.mapping_quality)/10.0))
 							if pileupread.alignment.query_sequence[pileupread.query_position] == "A":
 								A=A+1 # counts the number of As at a site
@@ -136,7 +138,7 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 	majorbase_ratio = list(map(ratio, majorbases, coverage))
 	secondbase_ratio = list (map (ratio, secondbase, coverage))
 	
-	probability_of_seq_error = list (map (ratio, expected_number_of_errors, coverage))
+	probability_of_seq_error = list (map (ratio, expected_number_of_errors, coverage)) # Creates a per-column probability of alignment error.
 	
 #	print (majorsequence[19:38])
 
