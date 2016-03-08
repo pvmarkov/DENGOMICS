@@ -96,7 +96,7 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 			if (pairedread_on and pileupread.alignment.is_proper_pair) or (not pairedread_on) :
 				if (alignquality_on and pileupread.alignment.mapping_quality>=30) or (not alignquality_on):
 					if not pileupread.is_del and not pileupread.is_refskip :  # query position is None if is_del or is_refskip is set.
-						if (sequencingquality_on and pileupread.alignment.query_qualities[pileupread.query_position]>=30) or (not sequencingquality_on): # skips lower hierarchy loops if sequencing filter is on AND seq quality is low.
+						if (sequencingquality_on and pileupread.alignment.query_qualities[pileupread.query_position]>=60) or (not sequencingquality_on): # skips lower hierarchy loops if sequencing filter is on AND seq quality is low.
 							number_of_errors = number_of_errors + pow (10.0, (-float (pileupread.alignment.mapping_quality)/10.0))
 							if pileupread.alignment.query_sequence[pileupread.query_position] == "A":
 								A=A+1 # counts the number of As at a site
