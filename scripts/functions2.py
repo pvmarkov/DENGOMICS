@@ -89,16 +89,16 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 	number_of_indels_dictionary = dict()
 	number_of_indels_by_length_dict = dict()
 	
-#	for read in samfile.fetch('NGC_virus', 0, samfile.lengths[0]):
-#		length = len(read.get_blocks())
-#		if number_of_indels_dictionary.__contains__(length):
-#			number_of_indels_dictionary [length] += 1
-#		else:
-#			number_of_indels_dictionary [length] = 1
+	for read in samfile.fetch('NGC_virus', 0, samfile.lengths[0]):
+		length = len(read.get_blocks())
+		if number_of_indels_dictionary.__contains__(length):
+			number_of_indels_dictionary [length] += 1
+		else:
+			number_of_indels_dictionary [length] = 1
 			
-#	indels_dataframe = pd.DataFrame.from_dict(number_of_indels_dictionary)
-#	indels_dataframe.to_csv (csv_outputfile + "_indels")
-#	print (indels_dataframe.describe ())
+	indels_dataframe = pd.DataFrame.from_dict(number_of_indels_dictionary, index=[0])
+	indels_dataframe.to_csv (csv_outputfile + "_indels")
+	print (indels_dataframe.describe ())
 
 # ITERATES COLUMN BY COLUMN	
 	for pileupcolumn in samfile.pileup('NGC_virus', 0, samfile.lengths[0], max_depth = 2000000): # iterates over alignment columns
@@ -106,7 +106,7 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 		position.append (pileupcolumn.pos)
 		A=C=T=G=N=indels_in_single_column=0 # shortcut for A=0, C=0 etc.
 		number_of_errors = 0
-	# WITHIN COLUMN, ITERATES ROW BY ROW
+# WITHIN COLUMN, ITERATES ROW BY ROW
 		for pileupread in pileupcolumn.pileups:
 			if (pairedread_on and pileupread.alignment.is_proper_pair) or (not pairedread_on) :
 				if (alignquality_on and pileupread.alignment.mapping_quality>=30) or (not alignquality_on):
@@ -115,10 +115,10 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 							number_of_errors = number_of_errors + pow (10.0, (-float (pileupread.alignment.mapping_quality)/10.0))
 							if pileupread.indel != 0:
 								indels_in_single_column += 1
-#								if number_of_indels_by_length_dict.__contains__(pileupread.indel):
-#									number_of_indels_by_length_dict [pileupread.indel] += 1
-#								else:
-#									number_of_indels_by_length_dict [pileupread.indel] = 1
+								if number_of_indels_by_length_dict.__contains__(pileupread.indel):
+									number_of_indels_by_length_dict [pileupread.indel] += 1
+								else:
+									number_of_indels_by_length_dict [pileupread.indel] = 1
 #	NEW CODE				indels_in_single_column += 1 if pileupread.indel != 0 #prototype of counter of number of indels per site.
 							if pileupread.alignment.query_sequence[pileupread.query_position] == "A":
 								A=A+1 # counts the number of As at a site
@@ -173,9 +173,9 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 	print (counts_dataframe.describe ())
 	samfile.close()
 
-#	indels_sizes_dataframe = pd.DataFrame.from_dict(number_of_indels_by_length_dict)
-#	indels_sizes_dataframe.to_csv (csv_outputfile + "_indels_lengths")
-#	print (indels_sizes_dataframe.describe ())
+	indels_sizes_dataframe = pd.DataFrame.from_dict(number_of_indels_by_length_dict)
+	indels_sizes_dataframe.to_csv (csv_outputfile + "_indels_lengths")
+	print (indels_sizes_dataframe.describe ())
 
 
 def getting_position_correction (reference_genome, majorsequence):
