@@ -96,7 +96,7 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 		else:
 			number_of_indels_dictionary [length] = 1
 			
-	indels_dataframe = pd.DataFrame.from_dict(number_of_indels_dictionary, index=[0])
+	indels_dataframe = pd.DataFrame.from_dict(number_of_indels_dictionary)
 	indels_dataframe.to_csv (csv_outputfile + "_indels")
 	print (indels_dataframe.describe ())
 
