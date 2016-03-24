@@ -95,10 +95,11 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 			number_of_indels_dictionary [length] += 1
 		else:
 			number_of_indels_dictionary [length] = 1
-			
-	indels_dataframe = pd.DataFrame.from_dict(number_of_indels_dictionary)
-	indels_dataframe.to_csv (csv_outputfile + "_indels")
-	print (indels_dataframe.describe ())
+
+	number_of_indels_dataframe = pd.DataFrame({'number_of_indels_per_read': list (number_of_indels_dictionary.keys()), 'number_of_reads_with_given_indel_number': list (number_of_indels_dictionary.values())})
+	#pd.DataFrame.from_dict(number_of_indels_dictionary)
+	number_of_indels_dataframe.to_csv (csv_outputfile + "_indels_lengths")
+#	print (indels_dataframe.describe ())
 
 # ITERATES COLUMN BY COLUMN	
 	for pileupcolumn in samfile.pileup('NGC_virus', 0, samfile.lengths[0], max_depth = 2000000): # iterates over alignment columns
@@ -111,15 +112,14 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 			if (pairedread_on and pileupread.alignment.is_proper_pair) or (not pairedread_on) :
 				if (alignquality_on and pileupread.alignment.mapping_quality>=30) or (not alignquality_on):
 					if not pileupread.is_del and not pileupread.is_refskip :  # query position is None if is_del or is_refskip is set.
-						if (sequencingquality_on and pileupread.alignment.query_qualities[pileupread.query_position]>=60) or (not sequencingquality_on): # skips lower hierarchy loops if sequencing filter is on AND seq quality is low.
+						if (sequencingquality_on and pileupread.alignment.query_qualities[pileupread.query_position]>=30) or (not sequencingquality_on): # skips lower hierarchy loops if sequencing filter is on AND seq quality is low.
 							number_of_errors = number_of_errors + pow (10.0, (-float (pileupread.alignment.mapping_quality)/10.0))
 							if pileupread.indel != 0:
 								indels_in_single_column += 1
-								if number_of_indels_by_length_dict.__contains__(pileupread.indel):
-									number_of_indels_by_length_dict [pileupread.indel] += 1
+								if number_of_indels_by_length_dict.__contains__(pileupread.indel): #checks if we already have a key equal to the current 'pileupread.indel' value, which provides the size of the indel starting at that position.
+									number_of_indels_by_length_dict [pileupread.indel] += 1 # if the indel size key above was present, then increments that indel size by one
 								else:
-									number_of_indels_by_length_dict [pileupread.indel] = 1
-#	NEW CODE				indels_in_single_column += 1 if pileupread.indel != 0 #prototype of counter of number of indels per site.
+									number_of_indels_by_length_dict [pileupread.indel] = 1 # if the indel size key above was absent, then creates it as new key and sets the value to one
 							if pileupread.alignment.query_sequence[pileupread.query_position] == "A":
 								A=A+1 # counts the number of As at a site
 							elif pileupread.alignment.query_sequence[pileupread.query_position] == "C":
@@ -173,9 +173,15 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 	print (counts_dataframe.describe ())
 	samfile.close()
 
-	indels_sizes_dataframe = pd.DataFrame.from_dict(number_of_indels_by_length_dict)
+#	indels_dataframe = pd.DataFrame({'number_of_indels_per_read': list (number_of_indels_dictionary.keys()), 'number_of_reads_with_gien_indel_number': list (number_of_indels_dictionary.values())})
+
+	indels_sizes_dataframe = pd.DataFrame ({'indel_size': list (number_of_indels_by_length_dict.keys()), 'number_of_indels_by_size': list (number_of_indels_by_length_dict.values())})
+	#.from_dict(number_of_indels_by_length_dict)
 	indels_sizes_dataframe.to_csv (csv_outputfile + "_indels_lengths")
+	print (number_of_indels_dataframe.describe ())
 	print (indels_sizes_dataframe.describe ())
+
+
 
 
 def getting_position_correction (reference_genome, majorsequence):
