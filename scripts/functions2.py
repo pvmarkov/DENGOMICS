@@ -98,7 +98,7 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 
 	number_of_indels_dataframe = pd.DataFrame({'number_of_indels_per_read': list (number_of_indels_dictionary.keys()), 'number_of_reads_with_given_indel_number': list (number_of_indels_dictionary.values())})
 	#pd.DataFrame.from_dict(number_of_indels_dictionary)
-	number_of_indels_dataframe.to_csv (csv_outputfile + "_indels_lengths")
+	number_of_indels_dataframe.to_csv (csv_outputfile + "_indels_per_read")
 #	print (indels_dataframe.describe ())
 
 # ITERATES COLUMN BY COLUMN	
