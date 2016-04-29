@@ -41,10 +41,11 @@ def extracts_seqs_from_fasta (filename):
 def determin_codon_posit(annotation, site_value):
     start = annotation.start
     end = annotation.end
+    positionall=range (start, end)
     position1=range (start, end, 3)
     position2=range (start+1, end, 3)
     position3=range (start+2, end, 3)
-    return [site_value [i] for i in position1], [site_value [i] for i in position2], [site_value [i] for i in position3]
+    return [site_value [i] for i in positionall], [site_value [i] for i in position1], [site_value [i] for i in position2], [site_value [i] for i in position3]
 
 def runningMeanFast(x, N):
     return np.convolve(x, np.ones((N,))/N)[(N-1):]
@@ -66,7 +67,7 @@ class Annotation (object):
         return self.name + ": " + str (self.start) + " to " + str (self.end)
         
 def make_annotation (name, start, end, correction):
-    annotation = Annotation (name, int(start) + correction, int (end) + correction)
+    annotation = Annotation (name, (int(start)-1) + correction, (int (end)-1) + correction)
     return annotation
     
     
