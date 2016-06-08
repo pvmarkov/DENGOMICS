@@ -47,6 +47,17 @@ def determin_codon_posit(annotation, site_value):
     position3=range (start+2, end, 3)
     return [site_value [i] for i in positionall], [site_value [i] for i in position1], [site_value [i] for i in position2], [site_value [i] for i in position3]
 
+def determin_codon_posit_coordinates(annotation):
+    start = annotation.start
+    end = annotation.end
+    positionall=range (start, end)
+    position1=range (start, end, 3)
+    position2=range (start+1, end, 3)
+    position3=range (start+2, end, 3)
+    return positionall, position1, position2, position3
+
+
+
 def runningMeanFast(x, N):
     return np.convolve(x, np.ones((N,))/N)[(N-1):]
     
@@ -75,6 +86,8 @@ def make_annotation (name, start, end, correction):
 def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignquality_on, pairedread_on):
 
 	samfile = pysam.AlignmentFile(bamfile, "rb" ) # open a file handle for the bam file under the name samfile
+	#AC = AT = AG = CA = CT = CG = TA = TC = TG = GA = GC = GT = 0
+	#As_count_in_genome = Cs_count_in_genome = Ts_count_in_genome = Gs_count_in_genome = 0
 	indels_by_column_list = list ()
 	coverage = list () # creating an empty list that will take coverage by position (column)
 	position = list ()
@@ -90,30 +103,36 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 	number_of_indels_dictionary = dict()
 	number_of_indels_by_length_dict = dict()
 	
-	for read in samfile.fetch('NGC_virus', 0, samfile.lengths[0]):
-		length = len(read.get_blocks())
-		if number_of_indels_dictionary.__contains__(length):
+	counter = 0
+	for read in samfile.fetch('NGC_virus', 0, samfile.lengths[0]): # This bit counts the number of reads by number of indels in each
+		length = (len(read.get_blocks())) - 1 # Because get_blocks provides a list of (start and stop coordinates of) blocks in a read, we subtract 1 to get the number of indels (that are between blocks)
+		# print (read.get_blocks()) #this is just to check what read.get_blocks produces
+		if number_of_indels_dictionary.__contains__(length): 
 			number_of_indels_dictionary [length] += 1
 		else:
 			number_of_indels_dictionary [length] = 1
+		if length == -1: # This bit prints the first 300 reads found to have zero blocks, so we can inspect them.
+			counter += 1
+			if counter < 200:
+				print (read)
 
 	number_of_indels_dataframe = pd.DataFrame({'number_of_indels_per_read': list (number_of_indels_dictionary.keys()), 'number_of_reads_with_given_indel_number': list (number_of_indels_dictionary.values())})
 	#pd.DataFrame.from_dict(number_of_indels_dictionary)
 	number_of_indels_dataframe.to_csv (csv_outputfile + "_indels_per_read")
 #	print (indels_dataframe.describe ())
 
-# ITERATES COLUMN BY COLUMN	
+	# ITERATES COLUMN BY COLUMN	
 	for pileupcolumn in samfile.pileup('NGC_virus', 0, samfile.lengths[0], max_depth = 2000000): # iterates over alignment columns
-#		coverage.append (pileupcolumn.n) # pileupcolumn.n gives the number of reads mapping to that column. here these numbers are appended to the coverage list as the program loops column by column.
+		# coverage.append (pileupcolumn.n) # pileupcolumn.n gives the number of reads mapping to that column. here these numbers are appended to the coverage list as the program loops column by column.
 		position.append (pileupcolumn.pos)
 		A=C=T=G=N=indels_in_single_column=0 # shortcut for A=0, C=0 etc.
 		number_of_errors = 0
-# WITHIN COLUMN, ITERATES ROW BY ROW
+		# WITHIN COLUMN, ITERATES ROW BY ROW
 		for pileupread in pileupcolumn.pileups:
 			if (pairedread_on and pileupread.alignment.is_proper_pair) or (not pairedread_on) :
 				if (alignquality_on and pileupread.alignment.mapping_quality>=30) or (not alignquality_on):
 					if not pileupread.is_del and not pileupread.is_refskip :  # query position is None if is_del or is_refskip is set.
-						if (sequencingquality_on and pileupread.alignment.query_qualities[pileupread.query_position]>=30) or (not sequencingquality_on): # skips lower hierarchy loops if sequencing filter is on AND seq quality is low.
+						if (sequencingquality_on and pileupread.alignment.query_qualities[pileupread.query_position]>=60) or (not sequencingquality_on): # skips lower hierarchy loops if sequencing filter is on AND seq quality is low.
 							number_of_errors = number_of_errors + pow (10.0, (-float (pileupread.alignment.mapping_quality)/10.0))
 							if pileupread.indel != 0:
 								indels_in_single_column += 1
@@ -144,20 +163,68 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 		Ns.append(N)
 		l= [A, C, T, G]
 		l.sort()
-		majorbases.append (l[3]) # Populates the majorbases list with the numbers of the most frequent nuke by genome site
-		secondbase.append (l[2]) # Populates the secondbases list with the numbers of the 2nd most frequent nuke by genome site
+		majorbases.append (l[3]) # Populates the majorbases list with the numbers of the most frequent base by genome site
+		secondbase.append (l[2]) # Populates the secondbases list with the numbers of the 2nd most frequent base by genome site
 		if A == max (A, C, G, T):
 			majorbaseid = "a"
+			#As_count_in_genome = As_count_in_genome + 1
+			#AC = AC + C	# This one and the ones below help sum each individual mutation.
+			#AT = AT + T # This one and the ones below help sum each individual mutation.
+			#AG = AG + G
 		elif C == max (A, C, G, T):
 			majorbaseid = "c"
-		elif G == max (A, C, G, T):
-			majorbaseid = "g"
-		else:
+			#Cs_count_in_genome = Cs_count_in_genome + 1
+			#CA = CA + A
+			#CT = CT + T
+			#CG = CG + G
+		elif T == max (A, C, G, T):
 			majorbaseid = "t"
+			#Ts_count_in_genome = Ts_count_in_genome + 1
+			#TA = TA + A
+			#TC = TC + C
+			#TG = TG + G
+
+		else:
+			majorbaseid = "g"
+			#Gs_count_in_genome = Gs_count_in_genome + 1
+			#GA = GA + A
+			#GC = GC + C
+			#GT = GT + T
+			
 		majorsequence = majorsequence + majorbaseid # creates the CONSENSUS SEQUENCE (populates a STRING with ACTGs to identify the most common nuke
-	
+		
 	def ratio(x,y):
 		return x/y
+
+	#total_mutations_count = AC + AT + AG + CA + CT + CG + TA + TC + TG + GA + GC + GT
+	#freqAC = AC / total_mutations_count
+	#freqAT = AT / total_mutations_count
+	#freqAG = AG / total_mutations_count
+	#freqCA = CA / total_mutations_count
+	#freqCT = CT / total_mutations_count
+	#freqCG = CG / total_mutations_count
+	#freqTA = TA / total_mutations_count
+	#freqTC = TC / total_mutations_count
+	#freqTG = TG / total_mutations_count
+	#freqGA = GA / total_mutations_count
+	#freqGC = GC / total_mutations_count
+	#freqGT = GT / total_mutations_count
+
+	#total_adjusted_mutations = (AC/As_count_in_genome) + (AT/As_count_in_genome) + (AG/As_count_in_genome) + (CA/Cs_count_in_genome) + (CT/Cs_count_in_genome) + (CG/Cs_count_in_genome) + (TA/Ts_count_in_genome) + (TC/Ts_count_in_genome) + (TG/Ts_count_in_genome) + (GA/Gs_count_in_genome) + (GC/Gs_count_in_genome) + (GT/Gs_count_in_genome)
+
+	#AdjustedfreqAC = (AC/As_count_in_genome) / total_adjusted_mutations
+	#AdjustedfreqAT = (AT/As_count_in_genome) / total_adjusted_mutations
+	#AdjustedfreqAG = (AG/As_count_in_genome) / total_adjusted_mutations
+	#AdjustedfreqCA = (CA/Cs_count_in_genome) / total_adjusted_mutations
+	#AdjustedfreqCT = (CT/Cs_count_in_genome) / total_adjusted_mutations
+	#AdjustedfreqCG = (CG/Cs_count_in_genome) / total_adjusted_mutations
+	#AdjustedfreqTA = (TA/Ts_count_in_genome) / total_adjusted_mutations
+	#AdjustedfreqTC = (TC/Ts_count_in_genome) / total_adjusted_mutations
+	#AdjustedfreqTG = (TG/Ts_count_in_genome) / total_adjusted_mutations
+	#AdjustedfreqGA = (GA/Gs_count_in_genome) / total_adjusted_mutations
+	#AdjustedfreqGC = (GC/Gs_count_in_genome) / total_adjusted_mutations
+	#AdjustedfreqGT = (GT/Gs_count_in_genome) / total_adjusted_mutations
+
 
 	majorbase_ratio = list(map(ratio, majorbases, coverage))
 	secondbase_ratio = list (map (ratio, secondbase, coverage))
@@ -171,7 +238,7 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 	counts_dataframe = pd.DataFrame ({'position': position, 'coverage':coverage, 'As':As, 'Cs':Cs, 'Ts':Ts, 'Gs':Gs, 'Ns':Ns, 'majorbases':majorbases, 'majorbase_ratio': majorbase_ratio, 'secondbase': secondbase, 'secondbase_ratio': secondbase_ratio, 'majorsequence': list (majorsequence), 'expected_number_of_errors':expected_number_of_errors, 'probability_of_seq_error': probability_of_seq_error, 'number_of_indels_by_position' : indels_by_column_list} )
 
 	counts_dataframe.to_csv (csv_outputfile)
-	print (counts_dataframe.describe ())
+	#print (counts_dataframe.describe ())
 	samfile.close()
 
 #	indels_dataframe = pd.DataFrame({'number_of_indels_per_read': list (number_of_indels_dictionary.keys()), 'number_of_reads_with_gien_indel_number': list (number_of_indels_dictionary.values())})
@@ -179,10 +246,12 @@ def getting_cover_ntfreqs(bamfile, csv_outputfile, sequencingquality_on, alignqu
 	indels_sizes_dataframe = pd.DataFrame ({'indel_size': list (number_of_indels_by_length_dict.keys()), 'number_of_indels_by_size': list (number_of_indels_by_length_dict.values())})
 	#.from_dict(number_of_indels_by_length_dict)
 	indels_sizes_dataframe.to_csv (csv_outputfile + "_indels_lengths")
-	print (number_of_indels_dataframe.describe ())
-	print (indels_sizes_dataframe.describe ())
-
-
+	#print (number_of_indels_dataframe.describe ())
+	#print (indels_sizes_dataframe.describe ())
+	
+	#file = open ("/Users/pvmarkov/dengue/data/mutation_frequencies.txt", "w")
+	#file.write ("freqAC " + str(freqAC) + str(AdjustedfreqAC) + "\n" + "freqAT " +  str (freqAT) + str(AdjustedfreqAT) + "\n" + "freqAG " + str (freqAG) + str(AdjustedfreqAG) + "\n" + "freqCA " + str (freqCA) + str(AdjustedfreqCA) + "\n" + "freqCT " + str (freqCT) + str(AdjustedfreqCT) + "\n" + "freqCG " + str (freqCG) + str(AdjustedfreqCG) + "\n" + "freqTA " + str (freqTA) + str(AdjustedfreqTA) + "\n" + "freqTC " + str (freqTC) + str(AdjustedfreqTC) + "\n" + "freqTG " + str (freqTG) + str(AdjustedfreqTG) + "\n" + "freqGA " + str (freqGA) + str(AdjustedfreqGA) + "\n" + "freqGC " + str (freqGC) + str(AdjustedfreqGC) + "\n" + "freqGT " + str (freqGT) + str(AdjustedfreqGT))
+	#file.close()
 
 
 def getting_position_correction (reference_genome, majorsequence):
