@@ -1,0 +1,10 @@
+input.tree.file=DENV4_complete_human_alignment_viatranslation_renamed_tree_noBS
+input.sequence.file=DENV4_complete_human_alignment_viatranslation_renamed.fsa
+input.sequence.sites_to_use=all
+map.type=DnDs
+alphabet=Codon(letter=DNA, genetic_code=Standard)
+optimization.tolerance=0.1
+optimization.max_number_f_eval=100
+count.max=300
+output.counts=PerBranchPerSitePerType(prefix=DENV4_complete_human_alignment_viatranslation_renamed_mapping_counts_per_branch_per_site_per_type_)
+input.sequence.remove_stop_codons=y
