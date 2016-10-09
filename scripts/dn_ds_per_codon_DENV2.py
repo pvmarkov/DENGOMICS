@@ -1,0 +1,2 @@
+exec (open("/Users/pvmarkov/dengue/scripts/functions2.py").read ())
+getting_dnds_from_site_branch_counts("/Users/pvmarkov/dengue/data/DENV2_complete_human__ALIGNMENT_RN_Sel001_mapping_counts_per_branch_per_site_per_type_1.count", "/Users/pvmarkov/dengue/data/DENV2_complete_human__ALIGNMENT_RN_Sel001_mapping_counts_per_branch_per_site_per_type_2.count", "/Users/pvmarkov/dengue/data/dn_ds_dataframe_DENV2.csv")
