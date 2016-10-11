@@ -260,6 +260,9 @@ def getting_position_correction (reference_genome, majorsequence):
 	print (len (refgenome))
 	return refgenome.find (majorseq_sample20) - 19
 	
+def ratio(x,y):
+	return x/y	
+	
 def getting_dnds_from_site_branch_counts(synonymous_substititons_file, non_synonymous_substititons_file, csv_outputfile):
 
 	codon_number = 0
@@ -268,6 +271,9 @@ def getting_dnds_from_site_branch_counts(synonymous_substititons_file, non_synon
 	non_synonymous_substitutions_by_position_in_codon = list ()
 	codon_numbers = list ()
 	codon_numbers_second_file = list ()
+	
+	not_a_number_synonymous = list()
+	not_a_number_nonsynonymous = list()
 
 	# open a file for reading
 	try:
@@ -278,7 +284,8 @@ def getting_dnds_from_site_branch_counts(synonymous_substititons_file, non_synon
 	# parse line by line
 	for l in codon_substititons_file:
 		branch_counter = 0
-		substitutions_sum = 0
+		substitutions_sum = 0.0
+		number_of_nans = 0
 		if l.find ("sites") > -1: # skipping headings line
 			pass
 		else:
@@ -294,6 +301,7 @@ def getting_dnds_from_site_branch_counts(synonymous_substititons_file, non_synon
 				else:
 					if branch == str ("nan"):
 						branch = 0
+						number_of_nans += 1
 					substitutions_sum = substitutions_sum + float (branch)
 				#print (branch)
 			#print (l [0:19])
@@ -301,6 +309,7 @@ def getting_dnds_from_site_branch_counts(synonymous_substititons_file, non_synon
 			#print (substitutions_sum)
 			codon_numbers.append(codon_number)
 			synonymous_substitutions_by_codon.append(substitutions_sum) # populates the empty As list with the NUMBER of As by genome site.
+			not_a_number_synonymous.append(number_of_nans)
 	#print (codon_positions)				
 	#print (synonymous_substitutions_by_codon)
 
@@ -317,7 +326,8 @@ def getting_dnds_from_site_branch_counts(synonymous_substititons_file, non_synon
 	# parse line by line
 	for l in codon_substititons_file:
 		branch_counter = 0
-		substitutions_sum = 0
+		substitutions_sum = 0.0
+		number_of_nans = 0
 		if l.find ("sites") > -1: # skipping headings line
 			pass
 		else:
@@ -330,23 +340,38 @@ def getting_dnds_from_site_branch_counts(synonymous_substititons_file, non_synon
 				else:
 					if branch == str ("nan"):
 						branch = 0
+						number_of_nans += 1
 					substitutions_sum = substitutions_sum + float (branch)
 				#print (branch)
 			#print (l [0:19])
 	#		print (codon_number)
 	#		print (substitutions_sum)
+			not_a_number_nonsynonymous.append(number_of_nans)
 			codon_numbers_second_file.append(codon_number)
 			non_synonymous_substitutions_by_codon.append(substitutions_sum) # populates the empty As list with the NUMBER of As by genome site.
 			non_synonymous_substitutions_by_position_in_codon.append(substitutions_sum/2)
-	def ratio(x,y):
-		return x/y
+
 
 
 	dn_ds = list(map(ratio, non_synonymous_substitutions_by_codon, synonymous_substitutions_by_codon))
+	dn_ds_filtered_uniformative_sites = list(map(ratio, non_synonymous_substitutions_by_codon, synonymous_substitutions_by_codon))
 	dn_ds_per_position_in_codon = list(map(ratio, non_synonymous_substitutions_by_position_in_codon, synonymous_substitutions_by_codon))
+	
+#	for i in range (100):
+#		print (str (dn_ds[i]) + " "+ str(non_synonymous_substitutions_by_codon[i]/synonymous_substitutions_by_codon[i]) + " "+ str(non_synonymous_substitutions_by_codon[i]) + " " + str (synonymous_substitutions_by_codon[i]))
+	
+	total_substitutions_by_codon = synonymous_substitutions_by_codon
+	
+	print (len(dn_ds_filtered_uniformative_sites))
+	print (len(dn_ds))
+	print (len (total_substitutions_by_codon))
+	
+	for i in range (len(dn_ds_filtered_uniformative_sites)):
+		total_substitutions_by_codon [i] = synonymous_substitutions_by_codon [i] + non_synonymous_substitutions_by_codon [i]
+		if total_substitutions_by_codon[i] < 2.0:
+			dn_ds_filtered_uniformative_sites [i] = None
 
-
-	dn_ds_by_codon_dataframe = pd.DataFrame ({'codon_numbers': codon_numbers, 'dn_ds': dn_ds, 'dn_ds_per_position_in_codon': dn_ds_per_position_in_codon, 'synonymous_substitutions':synonymous_substitutions_by_codon, 'non_synonymous_substitutions' : non_synonymous_substitutions_by_codon})
+	dn_ds_by_codon_dataframe = pd.DataFrame ({'codon_numbers': codon_numbers, 'dn_ds': dn_ds, 'dn_ds_filtered_uniformative_sites': dn_ds_filtered_uniformative_sites, 'dn_ds_per_position_in_codon': dn_ds_per_position_in_codon, 'synonymous_substitutions':synonymous_substitutions_by_codon, 'non_synonymous_substitutions' : non_synonymous_substitutions_by_codon, 'total_substitutions_by_codon': total_substitutions_by_codon,  'not_a_number_synonymous': not_a_number_synonymous , 'not_a_number_nonsynonymous' : not_a_number_nonsynonymous})
 	dn_ds_by_codon_dataframe.to_csv (csv_outputfile)
 
 	print (len(codon_numbers))
